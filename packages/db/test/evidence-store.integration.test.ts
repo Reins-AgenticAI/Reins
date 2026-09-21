@@ -77,6 +77,31 @@ describe("PostgreSQL evidence store", () => {
       ]);
       expect(investigation.findings.map((finding) => finding.code)).toContain("EXCESS_SETTLEMENT");
       expect((await evidence.findLatest({ organizationId }))?.workflow.id).toBe(workflowId);
+      const replayed = await evidence.append({
+        organizationId,
+        workflowId,
+        event: {
+          id: `settle-${suffix}`,
+          kind: "SETTLEMENT",
+          amountMinor: 900_000,
+          currency: "USD",
+          source: "PROVIDER",
+          occurredAt: "2026-09-20T18:02:00.000Z",
+          parentId: `auth-${suffix}`,
+        },
+      });
+      expect(replayed).toEqual({
+        id: `settle-${suffix}`,
+        kind: "SETTLEMENT",
+        amountMinor: 900_000,
+        currency: "USD",
+        source: "PROVIDER",
+        occurredAt: "2026-09-20T18:02:00.000Z",
+        parentId: `auth-${suffix}`,
+      });
+      expect(
+        (await evidence.getInvestigation({ organizationId, workflowId })).lifecycle,
+      ).toHaveLength(2);
       await expect(
         evidence.append({
           organizationId,
@@ -84,14 +109,14 @@ describe("PostgreSQL evidence store", () => {
           event: {
             id: `settle-${suffix}`,
             kind: "SETTLEMENT",
-            amountMinor: 900_000,
+            amountMinor: 800_000,
             currency: "USD",
             source: "PROVIDER",
             occurredAt: "2026-09-20T18:02:00.000Z",
             parentId: `auth-${suffix}`,
           },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Lifecycle event conflicts with existing event");
     } finally {
       await database.delete(schema.organization).where(eq(schema.organization.id, organizationId));
     }

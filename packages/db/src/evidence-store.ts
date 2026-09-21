@@ -66,6 +66,17 @@ function asEvent(row: typeof lifecycleEvent.$inferSelect): ReconciliationEvent {
   });
 }
 
+function matchesEvent(row: typeof lifecycleEvent.$inferSelect, event: ReconciliationEvent) {
+  return (
+    row.kind === event.kind &&
+    row.amountMinor === event.amountMinor &&
+    row.currency === event.currency &&
+    row.source === event.source &&
+    row.occurredAt.getTime() === new Date(event.occurredAt).getTime() &&
+    row.parentEventId === (event.parentId ?? null)
+  );
+}
+
 export class PostgresEvidenceStore {
   constructor(private readonly database: Database) {}
 
@@ -89,8 +100,20 @@ export class PostgresEvidenceStore {
       })
       .onConflictDoNothing()
       .returning();
-    if (!created) return input.event;
-    return asEvent(created);
+    if (created) return asEvent(created);
+    const [existing] = await this.database
+      .select()
+      .from(lifecycleEvent)
+      .where(
+        and(
+          eq(lifecycleEvent.organizationId, input.organizationId),
+          eq(lifecycleEvent.workflowId, input.workflowId),
+          eq(lifecycleEvent.providerEventId, input.event.id),
+        ),
+      )
+      .limit(1);
+    if (existing && matchesEvent(existing, input.event)) return asEvent(existing);
+    throw new Error("Lifecycle event conflicts with existing event");
   }
 
   async findLatest(
