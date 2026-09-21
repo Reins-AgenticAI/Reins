@@ -15,6 +15,12 @@ export {
   reserveBudget,
 } from "./budget-reservations";
 export type {
+  ControlRoomScenario,
+  ControlRoomScenarioRequest,
+  ScenarioExecutionMode,
+} from "./control-room-scenarios";
+export { controlRoomScenarios, getScenario } from "./control-room-scenarios";
+export type {
   AdvisorySource,
   AgentTrace,
   FinanceTask,
