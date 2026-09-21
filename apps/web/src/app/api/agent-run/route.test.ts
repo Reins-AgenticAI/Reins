@@ -66,7 +66,11 @@ function stubPersistence() {
   }));
   db.reserve.mockResolvedValue({ outcome: "HELD", reservationId: "reservation-1" });
   db.saveReceipt.mockResolvedValue({ id: "receipt-1" });
-  db.findReceipt.mockResolvedValue({ id: "receipt-existing" });
+  db.findReceipt.mockResolvedValue({
+    id: "receipt-existing",
+    decision: "DENY",
+    reasonCodes: ["BUDGET_CONFLICT"],
+  });
   db.append.mockResolvedValue(undefined);
   db.release.mockResolvedValue(undefined);
 }
@@ -118,6 +122,7 @@ describe("POST /api/agent-run", () => {
     await expect(response.json()).resolves.toMatchObject({
       receiptId: "receipt-existing",
       workflowId: "existing-workflow",
+      decision: "DENY",
     });
     expect(db.reserve).not.toHaveBeenCalled();
   });

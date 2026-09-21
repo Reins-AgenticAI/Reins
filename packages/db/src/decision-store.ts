@@ -46,7 +46,11 @@ export class PostgresDecisionStore {
 
   async findReceiptByWorkflow(organizationId: string, workflowId: string) {
     const [receipt] = await this.database
-      .select({ id: decisionReceipt.id })
+      .select({
+        id: decisionReceipt.id,
+        decision: decisionReceipt.decision,
+        reasonCodes: decisionReceipt.reasonCodes,
+      })
       .from(decisionReceipt)
       .where(
         and(
@@ -55,7 +59,9 @@ export class PostgresDecisionStore {
         ),
       )
       .limit(1);
-    return receipt;
+    return receipt
+      ? { ...receipt, reasonCodes: receipt.reasonCodes as DecisionReceipt["reasonCodes"] }
+      : undefined;
   }
 
   async createApproval(

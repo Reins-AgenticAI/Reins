@@ -89,6 +89,8 @@ describe("PostgreSQL decisions and approvals", () => {
         decisionStore.findReceiptByWorkflow(organizationId, workflowId),
       ).resolves.toEqual({
         id: saved.id,
+        decision: "ESCALATE",
+        reasonCodes: ["APPROVAL_REQUIRED"],
       });
       expect(resolved).toMatchObject({ status: "APPROVED", approverId: "user-finance-1" });
       await expect(

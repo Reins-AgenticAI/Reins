@@ -27,7 +27,7 @@ export type {
   LocalModelClient,
   WorkflowResult,
 } from "./local-agent-workflow";
-export { runLocalAgentWorkflow } from "./local-agent-workflow";
+export { requiresComplianceVendorReview, runLocalAgentWorkflow } from "./local-agent-workflow";
 export type { PolicyAgent } from "./policy-agent";
 export { createPolicyAgent } from "./policy-agent";
 export type {

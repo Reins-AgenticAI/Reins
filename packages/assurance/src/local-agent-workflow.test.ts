@@ -24,6 +24,27 @@ const safeModel: LocalModelClient = {
 };
 
 describe("runLocalAgentWorkflow", () => {
+  it("requires review for a new AML provider but denies unknown vendors outside that category", async () => {
+    for (const [category, vendor, expected] of [
+      ["AML data provider", "AML Provider", "ESCALATE"],
+      ["Cloud capacity", "AML Provider", "DENY"],
+      ["AML data provider", "Datacore", "ALLOW"],
+    ] as const) {
+      const result = await runLocalAgentWorkflow(
+        { ...task, amountMinor: 720_000, category, vendor },
+        safeModel,
+      );
+      expect(result.decision).toBe(expected);
+    }
+    for (const invalid of [{ amountMinor: 0 }, { currency: "EUR" }]) {
+      const result = await runLocalAgentWorkflow(
+        { ...task, category: "AML data provider", vendor: "AML Provider", ...invalid },
+        safeModel,
+      );
+      expect(result.decision).toBe("DENY");
+    }
+  });
+
   it("retains a simulation source without changing the deterministic escalation", async () => {
     const simulated: LocalModelClient = {
       async complete() {

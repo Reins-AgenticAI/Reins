@@ -41,9 +41,15 @@ const roles: AgentTrace["agent"][] = [
   "Evidence Agent",
 ];
 
+export function requiresComplianceVendorReview(task: FinanceTask): boolean {
+  return task.category === "AML data provider" && task.vendor.trim().toLowerCase() !== "datacore";
+}
+
 function decisionFor(task: FinanceTask): Pick<WorkflowResult, "decision" | "reason"> {
   if (!Number.isSafeInteger(task.amountMinor) || task.amountMinor <= 0 || task.currency !== "USD")
     return { decision: "DENY", reason: "Request is invalid for the active policy" };
+  if (requiresComplianceVendorReview(task))
+    return { decision: "ESCALATE", reason: "New AML provider requires Compliance review" };
   if (task.vendor !== "Datacore") return { decision: "DENY", reason: "Vendor is not approved" };
   if (task.amountMinor >= 1_000_000)
     return { decision: "ESCALATE", reason: "Amount meets the Finance approval threshold" };
