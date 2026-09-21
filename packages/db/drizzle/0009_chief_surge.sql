@@ -1,0 +1,1 @@
+ALTER TABLE "stripe_provider_execution" ADD COLUMN "provider_status" text;

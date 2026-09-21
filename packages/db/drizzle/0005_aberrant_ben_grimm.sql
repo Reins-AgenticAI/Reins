@@ -1,0 +1,5 @@
+CREATE TYPE "public"."workflow_agent_name" AS ENUM('INTAKE', 'VENDOR_CONTEXT', 'BUDGET_ANALYSIS', 'EVIDENCE');--> statement-breakpoint
+CREATE TYPE "public"."workflow_error_code" AS ENUM('MALFORMED_OUTPUT', 'AGENT_FAILURE', 'AGENT_TIMEOUT', 'WORKFLOW_CANCELLED');--> statement-breakpoint
+ALTER TABLE "workflow_event" ALTER COLUMN "agent" SET DATA TYPE "public"."workflow_agent_name" USING "agent"::"public"."workflow_agent_name";--> statement-breakpoint
+ALTER TABLE "workflow_event" ALTER COLUMN "error_code" SET DATA TYPE "public"."workflow_error_code" USING "error_code"::"public"."workflow_error_code";--> statement-breakpoint
+ALTER TABLE "workflow_run" ADD CONSTRAINT "workflow_run_completion_consistent" CHECK (("workflow_run"."status" = 'RUNNING' AND "workflow_run"."completed_at" IS NULL) OR ("workflow_run"."status" <> 'RUNNING' AND "workflow_run"."completed_at" IS NOT NULL));

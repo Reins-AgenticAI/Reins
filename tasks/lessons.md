@@ -1,0 +1,16 @@
+# Reins project lessons
+
+- Separate a technically feasible synthetic demonstration from validated customer demand and live-money readiness. Vendor features establish competition, not willingness to buy Reins.
+- Do not recommend the entire multi-protocol roadmap as the initial investment. Start with a complete narrow workflow, measure contributor effort, and gate further commercial investment on customer evidence.
+- Distinguish zero additional vendor charges from total economic cost. State hardware assumptions, contributor effort, existing Codex access, and production obligations explicitly.
+- A database-free developer check is not a release check. Explicit database verification must fail on missing or unsafe configuration, never silently skip and imply readiness.
+- Check final UI styles in the browser after palette and layout edits. Matching token names and desktop rendering do not establish readable mobile layouts; inspect narrow widths and keyboard behavior too.
+- Re-check differentiation against current first-party products before treating architecture as a moat. When a near-direct competitor exists, change the product claim and roadmap before expanding implementation.
+- Functional browser checks do not establish professional UI quality. Review screenshots against the product hierarchy, density, coherence, and reference bar before accepting a design milestone; a working but cluttered page fails the milestone.
+- Treat an idempotency key reused with a different canonical request as a conflict. Returning the original result without comparing request identity can hide a mutated amount or target.
+- Keep database integration commands portable on Windows. Prefer a test directory to a shell glob, and verify the package script itself rather than relying on a one-off direct test invocation.
+- Canonicalize request structure before hashing idempotency input. Semantically identical objects with different key insertion order must replay instead of conflicting.
+- Parallel HTTP dispatch does not guarantee parallel local-model inference on one GPU. Bound reasoning and output length, retain per-agent deadlines, and report observed queueing rather than claiming independent compute.
+- Enforce durable workflow invariants in PostgreSQL as well as application code. Ordered event uniqueness and completion-state checks protect replay when callers fail.
+- Validate financial-domain inputs in the domain function as well as at the HTTP boundary. Internal callers must not be able to turn malformed money or policy fields into an ALLOW result.
+- Scope human-approval retrieval to the organization and workflow at the persistence boundary. A valid approval from another workflow must never bind to a receipt.
