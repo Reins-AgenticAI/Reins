@@ -10,7 +10,7 @@
   "scripts": {
     "build": "pnpm -r --workspace-concurrency=1 --if-present build",
     "check": "pnpm lint && pnpm db:check && pnpm typecheck && pnpm test:coverage && pnpm build",
-    "check:release": "pnpm check && pnpm db:migrate:test && pnpm test:integration",
+    "check:release": "pnpm db:migrate:test && pnpm check && pnpm test:integration",
     "db:check": "pnpm --filter @reins/db db:check",
     "db:down": "podman compose down",
     "db:generate": "pnpm --filter @reins/db db:generate",
