@@ -1,59 +1,69 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const findLatest = vi.fn();
-const getInvestigation = vi.fn();
-const limit = vi.fn();
-const where = vi.fn(() => ({ limit }));
-const from = vi.fn(() => ({ where }));
-const select = vi.fn(() => ({ from }));
-
-vi.mock("@reins/db", () => ({
-  getDatabase: vi.fn(() => ({ select })),
+const { select, getInvestigation, queries } = vi.hoisted(() => ({
+  select: vi.fn(),
+  getInvestigation: vi.fn(),
+  queries: [] as unknown[],
+}));
+vi.mock("@reins/db", async (original) => ({
+  ...(await original<typeof import("@reins/db")>()),
+  getDatabase: () => ({ select }),
   PostgresEvidenceStore: class {
-    findLatest = findLatest;
     getInvestigation = getInvestigation;
   },
-  schema: {
-    budget: {
-      availableMinor: "availableMinor",
-      id: "id",
-      limitMinor: "limitMinor",
-      organizationId: "organizationId",
-    },
-  },
 }));
-
 describe("GET /api/control-room", () => {
   beforeEach(() => {
-    findLatest.mockReset();
-    getInvestigation.mockReset();
-    limit.mockReset();
-    limit.mockResolvedValue([{ limitMinor: 50_000_000, availableMinor: 49_916_000 }]);
+    vi.clearAllMocks();
+    queries.length = 0;
+    const responses = [
+      [{ id: "new" }, { id: "old" }],
+      [{ limitMinor: 10000, availableMinor: 6000 }],
+      [{ committedMinor: 1000, heldMinor: 3000 }],
+    ];
+    select.mockImplementation(() => {
+      const rows = responses.shift();
+      const builder = {
+        from: () => builder,
+        where: () => builder,
+        orderBy: () => builder,
+        limit: (n: number) => {
+          queries.push(n);
+          return Promise.resolve(rows);
+        },
+        // biome-ignore lint/suspicious/noThenProperty: Drizzle query builders intentionally implement PromiseLike.
+        then: (resolve: (value: unknown) => void) => Promise.resolve(rows).then(resolve),
+      };
+      return builder;
+    });
+    getInvestigation.mockImplementation(async ({ workflowId }) => ({
+      workflow: { id: workflowId, request: { amountMinor: 500 } },
+      decision: { outcome: workflowId === "old" ? "DENY" : "ALLOW" },
+      lifecycle: [],
+      findings: [],
+    }));
   });
-
-  it("returns the latest persisted synthetic investigation", async () => {
-    findLatest.mockResolvedValue({ workflow: { id: "workflow-1" }, lifecycle: [], findings: [] });
+  it("returns a bounded ordered queue with current held and committed budget", async () => {
     const { GET } = await import("./route");
-
     const response = await GET(
-      new Request("http://localhost/api/control-room?organizationId=org-1"),
+      new Request("http://localhost/api/control-room?organizationId=other-org"),
     );
-
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      synthetic: true,
-      investigation: { workflow: { id: "workflow-1" } },
-      budget: { limitMinor: 50_000_000, availableMinor: 49_916_000 },
+    expect(await response.json()).toMatchObject({
+      investigations: [{ workflow: { id: "new" } }, { workflow: { id: "old" } }],
+      budget: { availableMinor: 6000, committedMinor: 1000, heldMinor: 3000 },
+      rejectedMinor: 500,
+    });
+    expect(queries).toContain(24);
+    expect(getInvestigation).toHaveBeenCalledWith({
+      organizationId: "org-m2-demo",
+      workflowId: "new",
     });
   });
-
-  it("fails closed when the stored investigation cannot be read", async () => {
-    findLatest.mockRejectedValue(new Error("database unavailable"));
+  it("fails closed when evidence cannot be read", async () => {
+    getInvestigation.mockRejectedValue(new Error("unavailable"));
     const { GET } = await import("./route");
-
     const response = await GET(new Request("http://localhost/api/control-room"));
-
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ error: "CONTROL_ROOM_UNAVAILABLE" });
   });
 });

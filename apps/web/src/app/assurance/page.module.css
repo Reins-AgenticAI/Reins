@@ -639,7 +639,7 @@
   font-size: 0.76rem;
   line-height: 1.5;
 }
-.shell :where(a, button, input, summary):focus-visible {
+.shell :where(a, button, input, select, summary, [tabindex]):focus-visible {
   outline: 3px solid #1b7767;
   outline-offset: 3px;
 }
@@ -703,13 +703,209 @@
     grid-column: auto;
   }
   .tableWrap {
-    margin-inline: -1rem;
+    margin-inline: 0;
   }
   .sideCard {
     padding: 0.85rem;
   }
   .topbar > div {
     gap: 0.6rem;
+  }
+}
+.scenarioControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  padding: 1rem;
+  background: #fffefc;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+.scenarioControls > div {
+  flex: 1;
+  min-width: 0;
+}
+.scenarioControls > div > label,
+.scenarioControls legend {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.scenarioControls select,
+.agentDialog input {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+}
+.scenarioControls fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.scenarioControls fieldset label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.6rem;
+  gap: 0.3rem;
+  margin-right: 0.7rem;
+  font-size: 0.78rem;
+}
+.scenarioControls input {
+  accent-color: var(--teal);
+}
+.runScenario,
+.addAgent,
+.dialogActions button {
+  min-height: 2.6rem;
+  border: 1px solid var(--teal);
+  border-radius: 0.35rem;
+  background: var(--teal);
+  color: white;
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.runScenario:disabled,
+.dialogActions button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.addAgent {
+  margin-top: 0.8rem;
+  width: 100%;
+  background: transparent;
+  color: var(--teal);
+}
+.runStatus,
+.emptyNote {
+  font-size: 0.75rem;
+  color: #4e5c56;
+  line-height: 1.5;
+  padding: 0.8rem 0;
+}
+.tabs > strong,
+.tabs > small {
+  font-size: 0.7rem;
+}
+.tabs > small {
+  color: #4e5c56;
+}
+.requestSelect,
+.receiptLink {
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.requestSelect {
+  display: block;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 1.8rem;
+}
+.selectedRow {
+  background: var(--sage);
+}
+.receiptLink {
+  font-size: 0.67rem;
+  overflow-wrap: anywhere;
+}
+.receipt dd,
+.evidence li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.evidence li {
+  grid-template-columns: 9px minmax(0, 1fr);
+  row-gap: 0.2rem;
+  padding-bottom: 0.7rem;
+}
+.evidence time {
+  min-width: 4.5rem;
+  color: #4e5c56;
+}
+.evidence li > div {
+  grid-column: 2;
+}
+.agentDialog {
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  color: var(--ink);
+  background: var(--paper);
+}
+.agentDialog::backdrop {
+  background: rgba(21, 35, 31, 0.38);
+}
+.agentDialog p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.dialogActions button:first-child {
+  background: transparent;
+  color: var(--teal);
+}
+@media (max-width: 680px) {
+  .scenarioControls > div {
+    flex-basis: 100%;
+  }
+  .runScenario {
+    width: 100%;
+  }
+  .tableWrap table {
+    min-width: 900px;
+  }
+}
+@media (max-width: 1100px) {
+  .sidebar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar nav {
+    display: flex;
+    flex: 1;
+  }
+  .sidebar .brand {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+  .sidebar .backLink,
+  .sidebar > p,
+  .sidebar nav button > span {
+    display: none;
+  }
+  .sidebar nav button {
+    gap: 0.25rem;
+    padding: 0 0.4rem;
+    font-size: 0.72rem;
+    justify-content: center;
   }
 }
 @media (prefers-reduced-motion: reduce) {

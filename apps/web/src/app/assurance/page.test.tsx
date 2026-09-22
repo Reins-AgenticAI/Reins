@@ -6,6 +6,6 @@ describe("assurance workspace", () => {
   it("renders the persisted-investigation Control Room", () => {
     const markup = renderToStaticMarkup(<AssurancePage />);
     expect(markup).toContain("Agentic spend, governed by design.");
-    expect(markup).toContain("New synthetic request");
+    expect(markup).toContain("Run scenario");
   });
 });
