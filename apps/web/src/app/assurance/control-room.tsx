@@ -1155,7 +1155,7 @@ export function RequestQueue({
           <tbody>
             {visibleRows.map((row) => (
               <tr
-                key={row.requestId}
+                key={row.workflowId ?? row.requestId}
                 className={selectedId === row.requestId ? styles.selectedRow : undefined}
               >
                 <td>

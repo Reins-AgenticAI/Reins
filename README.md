@@ -1,22 +1,10 @@
 # Reins
 
-Reins is an independent policy enforcement and authorization evidence application for AI agent spending. This repository is jointly owned by Sai Prathap Reddy Cheluri and Lekhashree Srinath Reddy.
+Reins is a synthetic assurance workbench for AI-agent spending, jointly owned by Sai Prathap Reddy Cheluri and Lekhashree Srinath Reddy. Deterministic code evaluates policies, reserves a shared budget, and records decisions and evidence. Model output is advisory only. This milestone does not move money or establish production payment readiness.
 
-## Current milestone
+## Run locally
 
-Reins is a synthetic, local-first assurance workbench for AI-agent payment policies. It drafts policy text with an optional local Ollama model, validates it deterministically, compares synthetic provider capabilities, runs adversarial scenarios, reconciles lifecycle events, and creates verifiable evidence. It does not move money or approve payments.
-
-## Prerequisites
-
-- Node.js 24 (the CI runtime; other supported versions are not the verified baseline)
-- pnpm 11.19.0 (the repository package-manager version)
-- PostgreSQL 17 locally, or Podman with Compose support
-
-All runtime libraries and tools used by this milestone are free and open source. Hosted services are not required.
-
-## Local setup
-
-Run this command sequence from the repository root:
+Prerequisites: Node.js 24 (the CI baseline), pnpm 11.19.0, and PostgreSQL 17 or Podman with Compose support. From the repository root:
 
 ```powershell
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
@@ -24,124 +12,63 @@ pnpm install --frozen-lockfile
 pnpm db:up
 pnpm db:migrate
 pnpm db:verify
+$env:LLM_PROVIDER = "simulation"
+$env:STRIPE_TEST_EXECUTION_ENABLED = "false"
 pnpm dev
 ```
 
-The web application runs at `http://localhost:3000`. The API health endpoint runs at `http://127.0.0.1:4000/health`.
+`pnpm dev` starts the Next app at `http://localhost:3000` and the Fastify API at `http://127.0.0.1:4000/health`. Simulation requires no model key. Use only synthetic records; never commit `.env`, secrets, or customer financial data. The example authentication secret is for local development only.
 
-The secret in `.env.example` is for local development only. Replace it before any shared or hosted environment. Never commit `.env` or customer financial data.
+Open `/assurance`, select **Parallel**, and run **Quarter-close spend controls**. With sufficient available budget, the four requests return **ALLOW, ALLOW, DENY, ESCALATE**. The allowed and escalated requests hold $12,840 in total; the denied request releases its reservation. Each new scenario run creates fresh persisted records and consumes additional synthetic budget. Requests and evidence remain available after refresh.
 
-## Stripe Sandbox evidence integration
+Select **Reports** and change **Reporting month** to inspect charts and receipt-linked evidence. Reports cover the latest 24 loaded investigations, group approved request amounts by UTC decision month, and show a current budget snapshot. They are not settlement accounting. Review aging uses a visibly synthetic 24-hour SLA assessed at month end; review resolution dates are unavailable.
 
-The optional Stripe integration creates an unconfirmed PaymentIntent only after a stored Reins `ALLOW` receipt and a held synthetic budget reservation. It never confirms a payment, collects a card, captures funds, refunds, or uses a live Stripe key.
+## Verify the running app
 
-1. In the Stripe Dashboard's test/sandbox mode, create a restricted `rk_test_` key with PaymentIntents read and write access only.
-2. Add it locally to `.env` along with `STRIPE_MODE=test` and `STRIPE_TEST_EXECUTION_ENABLED=true`. Never expose it through `NEXT_PUBLIC_` or commit it.
-3. Run an allowed synthetic workflow. Its API response includes `workflowId` and `receiptId`. Call `POST /api/provider-executions/stripe-test` with those two values to create the unconfirmed intent.
-4. For webhook testing, use the Stripe CLI or a Dashboard test webhook to forward to `/api/webhooks/stripe`, then place the resulting `whsec_` secret in local `.env`.
-
-The opt-in smoke check creates a one-dollar unconfirmed Sandbox intent and retrieves it. It does not use a payment method or move money:
+Keep the local app running in another terminal:
 
 ```powershell
-$env:RUN_STRIPE_SANDBOX_TEST = "1"
-pnpm stripe:sandbox:verify
-Remove-Item Env:RUN_STRIPE_SANDBOX_TEST
+$env:REINS_EVAL_URL = "http://127.0.0.1:3000"
+pnpm eval:agents
+node --test scripts/run-parallel-spend-eval.test.mjs
+node scripts/verify-control-room.mjs http://127.0.0.1:3000
 ```
 
-Use only synthetic metadata and Stripe test/sandbox data. The smoke check is a credential-and-network check; the application flow is separately covered by deterministic unit, route, and PostgreSQL integration tests.
+The evaluator dispatches three synthetic workflows concurrently and reads trace `status` values from persisted investigations. It exits nonzero for unavailable workflows, absent trace evidence, or missing/null statuses. Its fixed request IDs replay existing receipts on repeat runs; it is a local workflow measurement, not a throughput benchmark.
 
-## Synthetic demo flow
+The browser verifier requires an existing Playwright installation and browser. It adds no repository dependency. If Playwright is outside this workspace, set `PLAYWRIGHT_MODULE` to its absolute package directory. Set `PLAYWRIGHT_CHANNEL=msedge` to use installed Microsoft Edge; otherwise Playwright's Chromium must be installed. Run `node scripts/verify-control-room.mjs --help` for options. `TEST_BASE_URL` is an alternative to the URL argument; only loopback hosts are accepted. Optional `REINS_VERIFY_OUTPUT_DIR` saves desktop/mobile screenshots.
 
-1. Open `http://localhost:3000/assurance`.
-2. Review the persisted synthetic finance request, deterministic receipt, advisory traces, and lifecycle evidence.
-3. Select “New synthetic request” and choose a market-data renewal, developer-tooling expansion, or unapproved cloud-capacity scenario.
-4. Run the local Ollama advisory workflow. Its output is context only; deterministic rules retain authority for ALLOW, ESCALATE, or DENY.
-5. Review the agent registry and evidence view. All displayed requests, vendors, amounts, and lifecycle events are synthetic.
+The verifier drives the actual Next app without intercepted responses: Parallel selection, four decision rows, persisted receipts/traces, the exact budget decrease, month-dependent chart totals, evidence links, and desktop/mobile overflow. It requires simulation mode, exclusive use of the local demo during the run, and at least $31,340 available for concurrent reservation attempts. An absent budget is initialized by the application to $500,000. Each successful verification holds another $12,840; the script never resets the database or calls Stripe.
 
-## Advisory-agent providers
-
-The default `LLM_PROVIDER=simulation` is deterministic, requires no model key, and is the recommended public portfolio-demo mode. It produces labelled synthetic advisory notes; it does not call a remote model.
-
-For local development with Ollama, set:
+## Repository and database gates
 
 ```powershell
-$env:LLM_PROVIDER = "ollama"
-$env:OLLAMA_ENDPOINT = "http://127.0.0.1:11434/api/generate"
-$env:OLLAMA_MODEL = "qwen3:4b"
-```
-
-For an optional hosted advisory model, set `LLM_PROVIDER=groq` and `GROQ_API_KEY` in the server environment. Reins calls Groq only from its server route; the provider key must never use a `NEXT_PUBLIC_` prefix or be supplied by browser code. The model only produces advisory context. The deterministic policy evaluator, budget reservation, evidence receipt, and reconciliation logic remain authoritative.
-
-If an advisory provider is missing, unavailable, rate-limited, times out, or returns malformed output, Reins returns **AI advisory unavailable**. It never turns that condition into an approval.
-
-## Vercel portfolio deployment
-
-Vercel hosts the Next.js application and its server-side routes. It does not run your laptop's Ollama process or access your local PostgreSQL database.
-
-1. Import this repository into Vercel and set the project root to `apps/web`. Enable source files outside the root directory so the workspace packages are available to the build.
-2. Add `DATABASE_URL`, `BETTER_AUTH_URL`, and `BETTER_AUTH_SECRET` as server-side Vercel environment variables. Use a managed PostgreSQL instance for durable hosted state.
-3. Set `LLM_PROVIDER=simulation` for a dependable public demonstration without an external LLM key.
-4. Optionally add `LLM_PROVIDER=groq` and `GROQ_API_KEY` in Vercel Project Settings to show hosted advisory traces. Keep the key limited and rotate it if exposed.
-5. Keep `STRIPE_TEST_EXECUTION_ENABLED=false`, and do not add `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` to the public portfolio deployment. The public demo uses safe synthetic provider evidence. Enable the external Stripe test connector only after an authenticated authorization boundary is in place.
-6. Do not add `NEXT_PUBLIC_GROQ_API_KEY`, payment credentials, customer data, or a local Ollama URL to Vercel.
-
-Vercel's free personal plan and a free LLM tier are suitable for a portfolio demonstration, not a commercial payment product or an uptime-backed service. All Reins requests, vendors, budgets, advisory outputs, and evidence shown in the public demo must remain synthetic.
-
-## Verification
-
-```powershell
+pnpm format
 pnpm check
-```
-
-This is the database-free developer gate: formatting/lint, migration metadata, TypeScript, coverage-gated unit tests, HTTP/auth-route tests that do not require PostgreSQL, and production builds. It does not certify database integration or milestone completion. The explicitly selected database suite never silently skips.
-
-Use the focused commands while developing:
-
-```powershell
-pnpm test:unit
-pnpm test:integration
-pnpm test:coverage
-```
-
-For the required real-database release gate, create the separate synthetic test configuration and start the isolated PostgreSQL test service:
-
-```powershell
 if (-not (Test-Path .env.test)) { Copy-Item .env.test.example .env.test }
 pnpm db:up:test
 pnpm check:release
 ```
 
-The release runbook, including reset, backup, restore, synthetic account flow, and limitations, is in [`docs/verification/m5-local-release.md`](docs/verification/m5-local-release.md).
+`check` runs lint, migration metadata checks, TypeScript, coverage-gated tests, and production builds without requiring PostgreSQL. `check:release` also validates the isolated test target, applies migrations, and runs real PostgreSQL integration tests. A missing database is a failed/pending gate, never a passed release check.
 
-`check:release` runs the developer gate, validates the test target, applies committed migrations to it, and executes PostgreSQL integration tests. CI runs this same gate. The test database must be named `reins_test` and reachable through `localhost`, `127.0.0.1`, or `::1`. Query parameters and fragments are rejected so they cannot override the target. The test service uses loopback port 5433, separate from development port 5432. These credentials and databases are synthetic and must never contain real data. Existing shell environment variables take precedence over dotenv files; clear an unrelated `DATABASE_URL` from the shell before running the test commands.
+The test database must be `reins_test` on a loopback host; its Compose service uses port 5433, separate from development port 5432. Shell environment variables override dotenv files: clear unrelated `DATABASE_URL` values before running test commands. Focused commands are `pnpm test:unit`, `pnpm test:integration`, `pnpm db:migrate:test`, and `pnpm test:integration:db`. See the [local release runbook](docs/verification/m5-local-release.md) for synthetic reset, backup, restore, and database safety checks.
 
-Focused database commands:
+Run the pnpm gates from a normally installed checkout. Dependency-junction worktrees can fail pnpm workspace reconciliation before checks start; that is not passing gate evidence. Child-process restrictions such as `spawn EPERM` also require a permitted terminal to run the same check.
 
-```powershell
-pnpm db:migrate:test
-pnpm test:integration:db
-```
+## Advisory providers and deployment boundary
 
-Both commands fail when the test configuration is missing or unsafe; they do not use the development database as a fallback. An unavailable PostgreSQL runtime is a pending release check, not a passed test. No SQLite or in-memory substitute establishes PostgreSQL transaction behavior.
+`LLM_PROVIDER=simulation` is the deterministic default. Local Ollama requires `LLM_PROVIDER=ollama`, `OLLAMA_ENDPOINT`, and `OLLAMA_MODEL`. Optional hosted advisory inference uses `LLM_PROVIDER=groq` with server-only `GROQ_API_KEY`. No model key may use a `NEXT_PUBLIC_` prefix. Provider errors, timeouts, missing configuration, and malformed outputs fail closed with advisory-unavailable feedback.
 
-The five milestone acceptance checks and remaining delivery stages are in [the milestone plan](docs/Reins_Milestone_Plan.md). Use a normal terminal with permission to start child processes for builds. If an agent sandbox reports `spawn EPERM`, record the environment restriction and rerun the same build with appropriate permission; do not disable type checking to hide it.
+Public Stripe test-intent creation remains disabled: keep `STRIPE_TEST_EXECUTION_ENABLED=false` and omit `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` from public deployments. The optional local connector creates only an unconfirmed Stripe test intent after a stored ALLOW receipt and held reservation; it never confirms or captures payment. Do not enable it publicly without an authenticated authorization boundary. All requests, vendors, budgets, and evidence must remain synthetic.
+
+Local verification does not certify hosted availability, production readiness, real-money authorization, or customer demand. Hosted deployment requires separate environment, authentication, and database verification; a host cannot reach the developer's local PostgreSQL or Ollama by default.
 
 ## Workspace
 
-```text
-apps/web       Next.js App Router user interface and Better Auth route
-apps/api       Fastify HTTP interface
-packages/db    PostgreSQL connection, Drizzle schema, and migrations
-docs           Product requirements, research, and architecture records
-```
+- `apps/web`: Next.js interface, server routes, and authentication.
+- `apps/api`: Fastify HTTP interface.
+- `packages/assurance`: deterministic policies, scenarios, and advisory workflow contracts.
+- `packages/db`: PostgreSQL persistence, Drizzle schema, and migrations.
 
-Turborepo is intentionally not included. The workspace will add it only if measured build time or caching needs justify another orchestration layer.
-
-## Product constraints
-
-- No real PAN, CVV, bank credentials, wallet private keys, or customer financial data.
-- No language model may approve a payment or change an authorization decision.
-- A provider integration must not claim enforcement without a mandatory control point.
-- The Control Room uses an off-white, charcoal, and forest-teal system and preserves an accessible evidence view without depending on Three.js.
-
-See `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `docs/architecture/m1-foundation.md` before making changes.
+Never store PAN, CVV, bank credentials, wallet private keys, production tokens, or customer financial data. Preserve fail-closed decisions, integer minor-unit money, idempotency, and atomic reservations. Read [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [current PRD](docs/Reins_PRD_Revision_1.md) before changing scope.

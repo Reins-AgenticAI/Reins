@@ -23,18 +23,41 @@ const results = await Promise.all(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(task),
+      signal: AbortSignal.timeout(120_000),
     }).catch(() => undefined);
     const durationMs = Math.round(performance.now() - started);
-    const body = response ? await response.json() : { error: "LOCAL_SERVER_UNAVAILABLE" };
-    return { requestId: task.requestId, status: response?.status ?? 0, durationMs, body };
+    const body = response ? await response.json().catch(() => null) : null;
+    let traces = [];
+    let error;
+    if (!response?.ok || !body?.workflowId) {
+      error = "WORKFLOW_UNAVAILABLE";
+    } else {
+      // Advisory summaries returned by agent-run do not carry execution status.
+      // Read the durable investigation instead of inferring success from HTTP 200.
+      const evidence = await fetch(
+        `${baseUrl}/api/control-room?workflowId=${encodeURIComponent(body.workflowId)}`,
+        { signal: AbortSignal.timeout(30_000) },
+      ).catch(() => null);
+      const persisted = evidence?.ok ? await evidence.json().catch(() => null) : null;
+      const recorded = persisted?.investigation?.traces;
+      if (!Array.isArray(recorded) || recorded.length === 0) {
+        error = "PERSISTED_TRACES_MISSING";
+      } else if (
+        recorded.some((trace) => typeof trace?.status !== "string" || !trace.status.trim())
+      ) {
+        error = "PERSISTED_TRACE_STATUS_MISSING";
+      } else {
+        traces = recorded;
+      }
+    }
+    return { requestId: task.requestId, status: response?.status ?? 0, durationMs, traces, error };
   }),
 );
-const successful = results.filter((result) => result.status === 200);
+const successful = results.filter((result) => result.status === 200 && !result.error);
 const durations = successful.map((result) => result.durationMs).sort((a, b) => a - b);
-const agentTraces = successful.flatMap((result) => result.body.traces ?? []);
+const agentTraces = successful.flatMap((result) => result.traces);
 const report = {
   synthetic: true,
-  endpoint: baseUrl,
   totalDurationMs: Math.round(performance.now() - startedAt),
   attemptedWorkflows: results.length,
   completedWorkflows: successful.length,
@@ -50,12 +73,12 @@ const report = {
   timeoutRate: agentTraces.length
     ? agentTraces.filter((trace) => trace.status === "TIMED_OUT").length / agentTraces.length
     : null,
-  outcomes: results.map(({ requestId, status, durationMs, body }) => ({
+  outcomes: results.map(({ requestId, status, durationMs, traces, error }) => ({
     requestId,
     status,
     durationMs,
-    traceStatuses: body.traces?.map((trace) => trace.status) ?? [],
-    error: body.error,
+    traceStatuses: traces.map((trace) => trace.status),
+    error,
   })),
 };
 console.log(JSON.stringify(report, null, 2));
