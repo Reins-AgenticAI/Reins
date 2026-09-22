@@ -849,8 +849,14 @@ export function ReportsView({
                 </div>
               </dl>
               <p>
-                Committed {money(model.budget.committedMinor)} · held{" "}
-                {money(model.budget.heldMinor)}
+                Committed{" "}
+                {typeof model.budget.committedMinor === "number"
+                  ? money(model.budget.committedMinor)
+                  : "Unavailable"}{" "}
+                · held{" "}
+                {typeof model.budget.heldMinor === "number"
+                  ? money(model.budget.heldMinor)
+                  : "Unavailable"}
               </p>
             </>
           ) : (

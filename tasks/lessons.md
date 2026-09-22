@@ -15,4 +15,5 @@
 - Preserve explicit per-task failures during evidence refresh. Reconcile lost or unknown responses separately; a matching stored receipt must not erase an explicit unavailable result.
 - Enforce durable workflow invariants in PostgreSQL as well as application code. Ordered event uniqueness and completion-state checks protect replay when callers fail.
 - Validate financial-domain inputs in the domain function as well as at the HTTP boundary. Internal callers must not be able to turn malformed money or policy fields into an ALLOW result.
+- Preserve absent optional financial facts as unavailable through reporting transformations. A missing committed or held amount must not become a displayed zero, even when aggregate allocation can be derived from known totals.
 - Scope human-approval retrieval to the organization and workflow at the persistence boundary. A valid approval from another workflow must never bind to a receipt.

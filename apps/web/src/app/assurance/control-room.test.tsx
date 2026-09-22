@@ -13,6 +13,19 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Control Room", () => {
+  it("shows unavailable budget details without replacing known allocation and remaining totals", () => {
+    const html = renderToStaticMarkup(
+      <ReportsView
+        investigations={[]}
+        budget={{ limitMinor: 10000, availableMinor: 4000 }}
+        selectedMonth="2026-10"
+        setSelectedMonth={() => {}}
+      />,
+    );
+    expect(html).toContain("Committed Unavailable · held Unavailable");
+    expect(html).toContain("<dt>Committed incl. holds</dt><dd>$60.00</dd>");
+    expect(html).toContain("<dt>Remaining</dt><dd>$40.00</dd>");
+  });
   it("renders month-specific accessible reports before their evidence drill-down", () => {
     const investigation = {
       workflow: {

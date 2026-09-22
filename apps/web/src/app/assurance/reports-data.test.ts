@@ -79,6 +79,19 @@ describe("report model", () => {
       overdue: 1,
     });
   });
+  it("preserves unknown budget details while deriving allocation from required totals", () => {
+    const partial = { limitMinor: 10000, availableMinor: 4000 };
+    expect(buildReportModel([], partial, "2026-10").budget).toEqual({
+      limitMinor: 10000,
+      remainingMinor: 4000,
+      allocatedMinor: 6000,
+      committedMinor: undefined,
+      heldMinor: undefined,
+    });
+    expect(
+      buildReportModel([], { ...partial, committedMinor: 0, heldMinor: 6000 }, "2026-10").budget,
+    ).toMatchObject({ committedMinor: 0, heldMinor: 6000 });
+  });
   it("computes weekly mean request amounts and excludes non-USD and invalid records", () => {
     const foreign = reportFixture("eur", "2026-10-03T12:00:00Z", 9900);
     foreign.workflow.request.currency = "EUR";

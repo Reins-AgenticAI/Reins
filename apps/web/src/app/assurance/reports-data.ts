@@ -93,8 +93,8 @@ export function buildReportModel(
   const snapshot = budget
     ? {
         limitMinor: budget.limitMinor,
-        committedMinor: budget.committedMinor ?? 0,
-        heldMinor: budget.heldMinor ?? 0,
+        committedMinor: budget.committedMinor,
+        heldMinor: budget.heldMinor,
         allocatedMinor: budget.limitMinor - budget.availableMinor,
         remainingMinor: budget.availableMinor,
       }
