@@ -4,6 +4,7 @@ import {
   ControlRoom,
   evidenceTimeline,
   RequestQueue,
+  reconcileRunRows,
   runScenario,
   ScenarioControls,
   stripeSandboxAvailability,
@@ -11,6 +12,64 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Control Room", () => {
+  it("does not promote explicit partial-run failures after a matching ALLOW receipt refresh", async () => {
+    vi.stubGlobal("fetch", async () =>
+      Response.json(
+        {
+          runId: "run-1",
+          results: [
+            {
+              requestId: "engineering:run-1",
+              decision: "DENY",
+              error: "TASK_UNAVAILABLE",
+              traces: [],
+            },
+          ],
+          budget: null,
+        },
+        { status: 503 },
+      ),
+    );
+    const response = await runScenario("quarter-close-spend-controls", "parallel", "run-1");
+    const request = {
+      requestId: "engineering:run-1",
+      title: "Developer-seat expansion",
+      requestingAgent: "Engineering",
+      vendor: "Datacore",
+      amountMinor: 84000,
+      currency: "USD",
+      costCenter: "Engineering",
+    };
+    const saved = {
+      workflow: { id: "persisted-allow", request, startedAt: "2026-09-21T10:00:00Z" },
+      decision: {
+        outcome: "ALLOW" as const,
+        reasonCodes: [],
+        policyVersionId: "policy",
+        reservationId: "reservation",
+        decidedAt: "2026-09-21T10:00:01Z",
+      },
+      traces: [],
+      lifecycle: [],
+      findings: [],
+    };
+    const rows = reconcileRunRows([{ ...request, error: response.results[0]?.error }], [saved]);
+    expect(rows[0]?.error).toBe("TASK_UNAVAILABLE");
+    expect(rows[0]?.decision).toBeUndefined();
+    expect(
+      renderToStaticMarkup(
+        <RequestQueue
+          rows={rows}
+          selectedId={request.requestId}
+          select={() => {}}
+          running={false}
+        />,
+      ),
+    ).toContain("UNAVAILABLE");
+    expect(reconcileRunRows([{ ...request, error: "RESPONSE_UNKNOWN" }], [saved])[0]).toMatchObject(
+      { decision: "ALLOW", workflowId: "persisted-allow", error: undefined },
+    );
+  });
   it("offers scenario modes and advisory-only registration without fault injection", () => {
     const html = renderToStaticMarkup(<ControlRoom />);
     for (const text of [

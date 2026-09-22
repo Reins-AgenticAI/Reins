@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./scenarios": "./src/control-room-scenarios.ts"
   },
   "scripts": {
     "test:unit": "vitest run --pool=threads --maxWorkers=1",

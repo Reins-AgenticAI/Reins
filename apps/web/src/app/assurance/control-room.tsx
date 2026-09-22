@@ -1,6 +1,10 @@
 "use client";
 
-import { controlRoomScenarios, getScenario, type ScenarioExecutionMode } from "@reins/assurance";
+import {
+  controlRoomScenarios,
+  getScenario,
+  type ScenarioExecutionMode,
+} from "@reins/assurance/scenarios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
 
@@ -148,6 +152,24 @@ export function evidenceTimeline(investigations: Investigation[]) {
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id));
 }
 
+export function reconcileRunRows(rows: QueueRow[], investigations: Investigation[]) {
+  return rows.map((row) => {
+    // A recorded failure is authoritative for this run. Only a lost/unknown
+    // response may be reconciled from a later persisted receipt.
+    if (row.error && row.error !== "RESPONSE_UNKNOWN") return row;
+    const saved = investigations.find((item) => item.workflow.request.requestId === row.requestId);
+    return saved?.decision
+      ? {
+          ...row,
+          workflowId: saved.workflow.id,
+          decision: saved.decision.outcome,
+          error: undefined,
+          pending: false,
+        }
+      : row;
+  });
+}
+
 export function ControlRoom() {
   const [view, setView] = useState("Requests");
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
@@ -179,23 +201,7 @@ export function ControlRoom() {
       };
       if (version !== loadVersion.current) return;
       setInvestigations(payload.investigations);
-      setRunRows(
-        (current) =>
-          current?.map((row) => {
-            const saved = payload.investigations.find(
-              (item) => item.workflow.request.requestId === row.requestId,
-            );
-            return saved?.decision
-              ? {
-                  ...row,
-                  workflowId: saved.workflow.id,
-                  decision: saved.decision.outcome,
-                  error: undefined,
-                  pending: false,
-                }
-              : row;
-          }) ?? null,
-      );
+      setRunRows((current) => (current ? reconcileRunRows(current, payload.investigations) : null));
       setBudget(payload.budget);
       setUnavailable(false);
     } catch {
@@ -258,7 +264,7 @@ export function ControlRoom() {
             pending: false,
             workflowId: result?.workflowId,
             decision: result?.error ? undefined : result?.decision,
-            error: result?.error ?? (!result ? "TASK_UNAVAILABLE" : undefined),
+            error: result?.error ?? (!result ? "RESPONSE_UNKNOWN" : undefined),
           };
         }),
       );
@@ -272,7 +278,7 @@ export function ControlRoom() {
             : "Shared budget unavailable. Completed decisions are retained.",
         );
     } catch {
-      setRunRows(pending.map((row) => ({ ...row, pending: false, error: "TASK_UNAVAILABLE" })));
+      setRunRows(pending.map((row) => ({ ...row, pending: false, error: "RESPONSE_UNKNOWN" })));
       setRunError(
         "Scenario unavailable. No decision is inferred; refresh persisted evidence before retrying.",
       );

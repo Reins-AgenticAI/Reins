@@ -11,6 +11,8 @@
 - Keep database integration commands portable on Windows. Prefer a test directory to a shell glob, and verify the package script itself rather than relying on a one-off direct test invocation.
 - Canonicalize request structure before hashing idempotency input. Semantically identical objects with different key insertion order must replay instead of conflicting.
 - Parallel HTTP dispatch does not guarantee parallel local-model inference on one GPU. Bound reasoning and output length, retain per-agent deadlines, and report observed queueing rather than claiming independent compute.
+- Browser verification must resolve the application's actual package exports. Aliasing a server-capable root import directly to a safe source file can conceal Node-only client dependencies.
+- Preserve explicit per-task failures during evidence refresh. Reconcile lost or unknown responses separately; a matching stored receipt must not erase an explicit unavailable result.
 - Enforce durable workflow invariants in PostgreSQL as well as application code. Ordered event uniqueness and completion-state checks protect replay when callers fail.
 - Validate financial-domain inputs in the domain function as well as at the HTTP boundary. Internal callers must not be able to turn malformed money or policy fields into an ALLOW result.
 - Scope human-approval retrieval to the organization and workflow at the persistence boundary. A valid approval from another workflow must never bind to a receipt.
