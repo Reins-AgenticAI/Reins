@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import {
+  clickAndWaitForResponse,
+  getLoopback,
+  installBrowserGuards,
+  isLoopbackUrl,
+} from "./control-room-browser-guards.mjs";
 
 if (process.argv.includes("--help")) {
   console.log(`Usage: node scripts/verify-control-room.mjs [http://127.0.0.1:3000]
@@ -16,28 +22,30 @@ let stage = "validate the local base URL";
 let browser;
 try {
   const base = new URL(process.argv[2] ?? process.env.TEST_BASE_URL ?? "http://127.0.0.1:3000");
-  assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(base.hostname));
-  assert.ok(["http:", "https:"].includes(base.protocol));
+  assert.ok(isLoopbackUrl(base));
   assert.ok(!base.username && !base.password && !base.search && !base.hash);
   stage = "load Playwright (set PLAYWRIGHT_MODULE to an installed package if needed)";
   const require = createRequire(import.meta.url);
   const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? "playwright");
   stage = "launch Chromium (set PLAYWRIGHT_CHANNEL=msedge for installed Edge)";
   browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(30_000);
-  const pageErrors = [];
-  page.on("pageerror", () => pageErrors.push(true));
-  page.on("console", (message) => {
-    if (message.type() === "error" && message.text().includes("same key")) pageErrors.push(true);
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+    serviceWorkers: "block",
   });
+  const browserErrors = await installBrowserGuards(context);
+  // Fetched/fulfilled documents have no socket address. Chromium's local-network
+  // check needs this origin-scoped permission; URL/redirect guards still apply.
+  await context.grantPermissions(["local-network-access"], { origin: base.origin });
+  const page = await context.newPage();
+  page.setDefaultTimeout(30_000);
   const money = (minor) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(minor / 100);
   const readEvidence = async () => {
-    const response = await page.request.get(new URL("/api/control-room", base).href);
+    const response = await getLoopback(page.request, new URL("/api/control-room", base).href);
     assert.equal(response.status(), 200);
     const payload = await response.json();
     assert.equal(payload.synthetic, true);
@@ -62,14 +70,13 @@ try {
   stage = "select Parallel and run Quarter-close spend controls";
   await page.getByLabel("Scenario", { exact: true }).selectOption("quarter-close-spend-controls");
   await page.getByRole("radio", { name: "Parallel", exact: true }).check();
-  const completed = page.waitForResponse(
+  const response = await clickAndWaitForResponse(
+    page,
     (response) =>
       new URL(response.url()).pathname === "/api/scenario-run" &&
       response.request().method() === "POST",
-    { timeout: 120_000 },
+    page.getByRole("button", { name: "Run scenario", exact: true }),
   );
-  await page.getByRole("button", { name: "Run scenario", exact: true }).click();
-  const response = await completed;
   stage = "require scenario HTTP 200 and ALLOW / ALLOW / DENY / ESCALATE";
   assert.equal(response.status(), 200);
   const run = await response.json();
@@ -200,7 +207,11 @@ try {
       });
     }
   }
-  assert.equal(pageErrors.length, 0);
+  stage = "require zero browser errors, blocked destinations, and network-guard failures";
+  assert.deepEqual(browserErrors, { browserErrors: 0, blockedRequests: 0, guardErrors: 0 });
+  stage = "close the browser cleanly";
+  await browser.close();
+  browser = undefined;
   console.log(
     "PASS: local Next/PostgreSQL journey; four parallel decisions; persisted traces and receipts; $12,840 budget decrease; month-dependent report totals, charts and evidence; desktop/mobile overflow; no browser errors.",
   );
@@ -216,5 +227,12 @@ try {
   );
   process.exitCode = 1;
 } finally {
-  await browser?.close();
+  if (browser) {
+    await browser.close().catch(() => {
+      console.error(
+        "FAIL: close the browser cleanly. Browser cleanup failed; diagnostics were withheld.",
+      );
+      process.exitCode = 1;
+    });
+  }
 }
