@@ -217,6 +217,7 @@ The project tracks shared ownership rather than assigning individual contributio
 - [Architecture foundation](docs/architecture/m1-foundation.md)
 - [Security policy](SECURITY.md)
 - [Contributing guide](CONTRIBUTING.md)
+- [MIT License](LICENSE)
 - [README structure reference](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
