@@ -7,6 +7,12 @@ import {
 } from "@reins/assurance/scenarios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
+import {
+  buildReportModel,
+  monthLabel,
+  type ReportBudget,
+  type ReportInvestigation,
+} from "./reports-data";
 
 type Decision = "ALLOW" | "ESCALATE" | "DENY";
 type RequestRecord = {
@@ -172,6 +178,7 @@ export function reconcileRunRows(rows: QueueRow[], investigations: Investigation
 
 export function ControlRoom() {
   const [view, setView] = useState("Requests");
+  const [reportMonth, setReportMonth] = useState("2026-10");
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [budget, setBudget] = useState<Budget>(null);
   const [loaded, setLoaded] = useState(false);
@@ -327,7 +334,7 @@ export function ControlRoom() {
           ← Product site
         </a>
         <nav>
-          {["Requests", "Agents", "Evidence"].map((item, index) => (
+          {["Requests", "Agents", "Evidence", "Reports"].map((item, index) => (
             <button
               className={view === item ? styles.activeNav : ""}
               aria-current={view === item ? "page" : undefined}
@@ -335,7 +342,7 @@ export function ControlRoom() {
               onClick={() => setView(item)}
               type="button"
             >
-              <span aria-hidden="true">{["▦", "◌", "▤"][index]}</span>
+              <span aria-hidden="true">{["▦", "◌", "▤", "▥"][index]}</span>
               {item}
               {item === "Requests" && <b>{rows.length || 4}</b>}
             </button>
@@ -369,21 +376,29 @@ export function ControlRoom() {
         <main className={styles.workspace} id="control-main">
           <section className={styles.heading}>
             <div>
-              <p>Spend requests</p>
-              <h1>Agentic spend, governed by design.</h1>
+              <p>{view === "Reports" ? "Spend intelligence" : "Spend requests"}</p>
+              <h1>
+                {view === "Reports"
+                  ? "Every decision, in perspective."
+                  : "Agentic spend, governed by design."}
+              </h1>
               <span>
-                Review, resolve, and retain a checked record of every synthetic agent request.
+                {view === "Reports"
+                  ? "Approved controlled spend and review outcomes from synthetic evidence."
+                  : "Review, resolve, and retain a checked record of every synthetic agent request."}
               </span>
             </div>
           </section>
-          <ScenarioControls
-            scenarioId={scenarioId}
-            setScenarioId={setScenarioId}
-            mode={mode}
-            setMode={setMode}
-            running={running}
-            execute={() => void execute()}
-          />
+          {view !== "Reports" && (
+            <ScenarioControls
+              scenarioId={scenarioId}
+              setScenarioId={setScenarioId}
+              mode={mode}
+              setMode={setMode}
+              running={running}
+              execute={() => void execute()}
+            />
+          )}
           <div className={styles.runStatus} role="status">
             {running
               ? "Scenario running. Advisory context cannot override deterministic policy."
@@ -408,259 +423,271 @@ export function ControlRoom() {
               )}
             </div>
           )}
-          <div className={styles.controlGrid}>
-            <div className={styles.mainColumn}>
-              {view === "Agents" ? (
-                <section className={styles.detailCard}>
-                  <h2>Advisory agents</h2>
-                  <p>
-                    Policy, risk, budget, and evidence roles supply context only. Manage the roster
-                    beside this workspace. Locally added names do not execute or change policy.
-                  </p>
-                </section>
-              ) : view === "Evidence" ? (
-                <section className={styles.detailCard}>
-                  <h2>Lifecycle findings</h2>
-                  {investigation?.findings.length ? (
-                    investigation.findings.map((finding) => (
-                      <p key={finding.code}>
-                        {finding.severity} · {finding.message}
-                      </p>
-                    ))
-                  ) : (
-                    <p>No lifecycle findings stored for the selected request.</p>
-                  )}
-                </section>
-              ) : null}
-              <RequestQueue
-                rows={rows}
-                selectedId={selected?.requestId ?? ""}
-                select={(id) => {
-                  setSelectedId(id);
-                  setStripeMessage("");
-                }}
-                running={running}
-              />
-              <section className={styles.detailGrid} aria-label="Selected request investigation">
-                <article className={styles.detailCard}>
-                  <header>
-                    <div>
-                      <h2>Deterministic policy gate</h2>
-                      <p>{selected?.title ?? "Select a completed request."}</p>
-                    </div>
-                    {selected?.decision && <Badge value={selected.decision} />}
-                  </header>
-                  <ol className={styles.checks}>
-                    {investigation?.decision ? (
-                      <>
-                        <li>
-                          <span>1</span>
-                          <div>
-                            <strong>Policy evaluation</strong>
-                            <small>{investigation.decision.policyVersionId}</small>
-                          </div>
-                          <b>{investigation.decision.outcome}</b>
-                        </li>
-                        {investigation.decision.reasonCodes.map((reason, index) => (
-                          <li key={reason}>
-                            <span>{index + 2}</span>
-                            <div>
-                              <strong>{humanize(reason)}</strong>
-                              <small>Recorded deterministic reason</small>
-                            </div>
-                          </li>
-                        ))}
-                      </>
+          {view === "Reports" ? (
+            <ReportsView
+              investigations={investigations}
+              budget={budget}
+              selectedMonth={reportMonth}
+              setSelectedMonth={setReportMonth}
+            />
+          ) : (
+            <div className={styles.controlGrid}>
+              <div className={styles.mainColumn}>
+                {view === "Agents" ? (
+                  <section className={styles.detailCard}>
+                    <h2>Advisory agents</h2>
+                    <p>
+                      Policy, risk, budget, and evidence roles supply context only. Manage the
+                      roster beside this workspace. Locally added names do not execute or change
+                      policy.
+                    </p>
+                  </section>
+                ) : view === "Evidence" ? (
+                  <section className={styles.detailCard}>
+                    <h2>Lifecycle findings</h2>
+                    {investigation?.findings.length ? (
+                      investigation.findings.map((finding) => (
+                        <p key={finding.code}>
+                          {finding.severity} · {finding.message}
+                        </p>
+                      ))
                     ) : (
-                      <li>
-                        <div>
-                          <strong>No persisted receipt loaded</strong>
-                          <small>
-                            {selected?.error
-                              ? "Task unavailable; no approval inferred."
-                              : "Run the scenario or select a persisted request."}
-                          </small>
-                        </div>
-                      </li>
+                      <p>No lifecycle findings stored for the selected request.</p>
                     )}
-                  </ol>
-                </article>
-                <article className={styles.detailCard} id="policy-receipt">
+                  </section>
+                ) : null}
+                <RequestQueue
+                  rows={rows}
+                  selectedId={selected?.requestId ?? ""}
+                  select={(id) => {
+                    setSelectedId(id);
+                    setStripeMessage("");
+                  }}
+                  running={running}
+                />
+                <section className={styles.detailGrid} aria-label="Selected request investigation">
+                  <article className={styles.detailCard}>
+                    <header>
+                      <div>
+                        <h2>Deterministic policy gate</h2>
+                        <p>{selected?.title ?? "Select a completed request."}</p>
+                      </div>
+                      {selected?.decision && <Badge value={selected.decision} />}
+                    </header>
+                    <ol className={styles.checks}>
+                      {investigation?.decision ? (
+                        <>
+                          <li>
+                            <span>1</span>
+                            <div>
+                              <strong>Policy evaluation</strong>
+                              <small>{investigation.decision.policyVersionId}</small>
+                            </div>
+                            <b>{investigation.decision.outcome}</b>
+                          </li>
+                          {investigation.decision.reasonCodes.map((reason, index) => (
+                            <li key={reason}>
+                              <span>{index + 2}</span>
+                              <div>
+                                <strong>{humanize(reason)}</strong>
+                                <small>Recorded deterministic reason</small>
+                              </div>
+                            </li>
+                          ))}
+                        </>
+                      ) : (
+                        <li>
+                          <div>
+                            <strong>No persisted receipt loaded</strong>
+                            <small>
+                              {selected?.error
+                                ? "Task unavailable; no approval inferred."
+                                : "Run the scenario or select a persisted request."}
+                            </small>
+                          </div>
+                        </li>
+                      )}
+                    </ol>
+                  </article>
+                  <article className={styles.detailCard} id="policy-receipt">
+                    <header>
+                      <div>
+                        <h2>Policy receipt</h2>
+                        <p>Immutable decision binding.</p>
+                      </div>
+                    </header>
+                    <dl className={styles.receipt}>
+                      {[
+                        ["Request", selected?.requestId ?? "Not run"],
+                        ["Policy", investigation?.decision?.policyVersionId ?? "Not loaded"],
+                        ["Reservation", investigation?.decision?.reservationId ?? "Not loaded"],
+                        [
+                          "Decision",
+                          selected?.decision ?? (selected?.error ? "UNAVAILABLE" : "PENDING"),
+                        ],
+                        [
+                          "Reason",
+                          investigation?.decision?.reasonCodes.map(humanize).join(", ") ||
+                            selectedResult?.reason ||
+                            "No receipt",
+                        ],
+                      ].map(([label, value]) => (
+                        <div key={label}>
+                          <dt>{label}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {selected?.workflowId && (
+                      <a
+                        className={styles.receiptLink}
+                        href={`/api/control-room?workflowId=${encodeURIComponent(selected.workflowId)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open persisted receipt ↗
+                      </a>
+                    )}
+                    {selectedResult && stripeSandboxAvailability(selectedResult) && (
+                      <section className={styles.stripeSandbox}>
+                        <strong>Stripe Sandbox evidence</strong>
+                        <p>
+                          Opt-in unconfirmed test intent. No card or money movement. Disabled on
+                          public deployments.
+                        </p>
+                        <button
+                          type="button"
+                          className={styles.stripeButton}
+                          disabled={stripeRunning}
+                          onClick={() => void executeStripe()}
+                        >
+                          {stripeRunning
+                            ? "Creating test intent…"
+                            : "Create unconfirmed Stripe Sandbox intent"}
+                        </button>
+                        <span role="status">{stripeMessage}</span>
+                      </section>
+                    )}
+                  </article>
+                  <article className={styles.detailCard}>
+                    <header>
+                      <div>
+                        <h2>Evidence timeline</h2>
+                        <p>Chronological records for the selected run.</p>
+                      </div>
+                    </header>
+                    <ol className={styles.evidence}>
+                      {evidenceTimeline(timelineInvestigations).map((event) => (
+                        <li key={event.id}>
+                          <span />
+                          <time dateTime={event.at}>
+                            {new Date(event.at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </time>
+                          <div>
+                            <strong>{event.title}</strong>
+                            <small>{event.detail}</small>
+                            <button
+                              className={styles.receiptLink}
+                              type="button"
+                              onClick={() => setSelectedId(event.requestId)}
+                            >
+                              {event.requestId}
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                    {!timelineInvestigations.length && (
+                      <p className={styles.emptyNote}>
+                        No timestamped evidence loaded for this run.
+                      </p>
+                    )}
+                  </article>
+                </section>
+              </div>
+              <aside className={styles.rightColumn}>
+                <section className={styles.sideCard}>
                   <header>
-                    <div>
-                      <h2>Policy receipt</h2>
-                      <p>Immutable decision binding.</p>
-                    </div>
+                    <h2>Advisory agent roster</h2>
+                    <span>{agents.length} roles</span>
                   </header>
-                  <dl className={styles.receipt}>
+                  <ul>
+                    {agents.map((agent) => {
+                      const trace = investigation?.traces.find(
+                        (item) => item.agent === agent.traceAgent,
+                      );
+                      return (
+                        <li key={agent.name}>
+                          <span className={styles.agentAvatar}>{agent.name.slice(0, 2)}</span>
+                          <div>
+                            <strong>{agent.name}</strong>
+                            <small>Advisory only{!agent.traceAgent ? " · local name" : ""}</small>
+                            {trace?.output && <small>{trace.output.summary}</small>}
+                          </div>
+                          <span className={styles.online}>
+                            {trace
+                              ? humanize(trace.status)
+                              : agent.traceAgent
+                                ? "Ready"
+                                : "Not connected"}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button
+                    className={styles.addAgent}
+                    type="button"
+                    onClick={() => setAgentDialog(true)}
+                  >
+                    Add advisory agent
+                  </button>
+                </section>
+                <section className={styles.sideCard}>
+                  <header>
+                    <h2>Shared budget</h2>
+                    <span>synthetic</span>
+                  </header>
+                  <div className={styles.budgetNumber}>
+                    <strong>{budget ? money(budget.availableMinor) : "Unavailable"}</strong>
+                    <b>
+                      {budget && budget.limitMinor > 0
+                        ? `${((budget.availableMinor / budget.limitMinor) * 100).toFixed(1)}%`
+                        : "—"}
+                      <small>available</small>
+                    </b>
+                  </div>
+                  <div className={styles.budgetMeter}>
+                    <span
+                      style={{
+                        width:
+                          budget && budget.limitMinor > 0
+                            ? `${Math.max(0, Math.min(100, (budget.availableMinor / budget.limitMinor) * 100))}%`
+                            : "0%",
+                      }}
+                    />
+                  </div>
+                  <dl className={styles.budgetFacts}>
                     {[
-                      ["Request", selected?.requestId ?? "Not run"],
-                      ["Policy", investigation?.decision?.policyVersionId ?? "Not loaded"],
-                      ["Reservation", investigation?.decision?.reservationId ?? "Not loaded"],
-                      [
-                        "Decision",
-                        selected?.decision ?? (selected?.error ? "UNAVAILABLE" : "PENDING"),
-                      ],
-                      [
-                        "Reason",
-                        investigation?.decision?.reasonCodes.map(humanize).join(", ") ||
-                          selectedResult?.reason ||
-                          "No receipt",
-                      ],
-                    ].map(([label, value]) => (
+                      ["Committed", budget?.committedMinor],
+                      ["Held", budget?.heldMinor],
+                      ["Available", budget?.availableMinor],
+                      [runRows ? "Rejected · this run" : "Rejected · loaded queue", rejectedMinor],
+                    ].map(([label, amount]) => (
                       <div key={label}>
                         <dt>{label}</dt>
-                        <dd>{value}</dd>
+                        <dd>{typeof amount === "number" ? money(amount) : "Unavailable"}</dd>
                       </div>
                     ))}
                   </dl>
-                  {selected?.workflowId && (
-                    <a
-                      className={styles.receiptLink}
-                      href={`/api/control-room?workflowId=${encodeURIComponent(selected.workflowId)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open persisted receipt ↗
-                    </a>
-                  )}
-                  {selectedResult && stripeSandboxAvailability(selectedResult) && (
-                    <section className={styles.stripeSandbox}>
-                      <strong>Stripe Sandbox evidence</strong>
-                      <p>
-                        Opt-in unconfirmed test intent. No card or money movement. Disabled on
-                        public deployments.
-                      </p>
-                      <button
-                        type="button"
-                        className={styles.stripeButton}
-                        disabled={stripeRunning}
-                        onClick={() => void executeStripe()}
-                      >
-                        {stripeRunning
-                          ? "Creating test intent…"
-                          : "Create unconfirmed Stripe Sandbox intent"}
-                      </button>
-                      <span role="status">{stripeMessage}</span>
-                    </section>
-                  )}
-                </article>
-                <article className={styles.detailCard}>
-                  <header>
-                    <div>
-                      <h2>Evidence timeline</h2>
-                      <p>Chronological records for the selected run.</p>
-                    </div>
-                  </header>
-                  <ol className={styles.evidence}>
-                    {evidenceTimeline(timelineInvestigations).map((event) => (
-                      <li key={event.id}>
-                        <span />
-                        <time dateTime={event.at}>
-                          {new Date(event.at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
-                        </time>
-                        <div>
-                          <strong>{event.title}</strong>
-                          <small>{event.detail}</small>
-                          <button
-                            className={styles.receiptLink}
-                            type="button"
-                            onClick={() => setSelectedId(event.requestId)}
-                          >
-                            {event.requestId}
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                  {!timelineInvestigations.length && (
-                    <p className={styles.emptyNote}>No timestamped evidence loaded for this run.</p>
-                  )}
-                </article>
-              </section>
+                </section>
+              </aside>
             </div>
-            <aside className={styles.rightColumn}>
-              <section className={styles.sideCard}>
-                <header>
-                  <h2>Advisory agent roster</h2>
-                  <span>{agents.length} roles</span>
-                </header>
-                <ul>
-                  {agents.map((agent) => {
-                    const trace = investigation?.traces.find(
-                      (item) => item.agent === agent.traceAgent,
-                    );
-                    return (
-                      <li key={agent.name}>
-                        <span className={styles.agentAvatar}>{agent.name.slice(0, 2)}</span>
-                        <div>
-                          <strong>{agent.name}</strong>
-                          <small>Advisory only{!agent.traceAgent ? " · local name" : ""}</small>
-                          {trace?.output && <small>{trace.output.summary}</small>}
-                        </div>
-                        <span className={styles.online}>
-                          {trace
-                            ? humanize(trace.status)
-                            : agent.traceAgent
-                              ? "Ready"
-                              : "Not connected"}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <button
-                  className={styles.addAgent}
-                  type="button"
-                  onClick={() => setAgentDialog(true)}
-                >
-                  Add advisory agent
-                </button>
-              </section>
-              <section className={styles.sideCard}>
-                <header>
-                  <h2>Shared budget</h2>
-                  <span>synthetic</span>
-                </header>
-                <div className={styles.budgetNumber}>
-                  <strong>{budget ? money(budget.availableMinor) : "Unavailable"}</strong>
-                  <b>
-                    {budget && budget.limitMinor > 0
-                      ? `${((budget.availableMinor / budget.limitMinor) * 100).toFixed(1)}%`
-                      : "—"}
-                    <small>available</small>
-                  </b>
-                </div>
-                <div className={styles.budgetMeter}>
-                  <span
-                    style={{
-                      width:
-                        budget && budget.limitMinor > 0
-                          ? `${Math.max(0, Math.min(100, (budget.availableMinor / budget.limitMinor) * 100))}%`
-                          : "0%",
-                    }}
-                  />
-                </div>
-                <dl className={styles.budgetFacts}>
-                  {[
-                    ["Committed", budget?.committedMinor],
-                    ["Held", budget?.heldMinor],
-                    ["Available", budget?.availableMinor],
-                    [runRows ? "Rejected · this run" : "Rejected · loaded queue", rejectedMinor],
-                  ].map(([label, amount]) => (
-                    <div key={label}>
-                      <dt>{label}</dt>
-                      <dd>{typeof amount === "number" ? money(amount) : "Unavailable"}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            </aside>
-          </div>
+          )}
         </main>
       </div>
       {agentDialog && (
@@ -676,6 +703,348 @@ export function ControlRoom() {
         />
       )}
     </div>
+  );
+}
+
+export function ReportsView({
+  investigations,
+  budget,
+  selectedMonth,
+  setSelectedMonth,
+}: {
+  investigations: ReportInvestigation[];
+  budget: ReportBudget;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
+}) {
+  const model = buildReportModel(investigations, budget, selectedMonth);
+  const months = [
+    ...new Set([
+      "2026-09",
+      "2026-10",
+      selectedMonth,
+      ...investigations.flatMap((item) => {
+        const time = Date.parse(item.decision?.decidedAt ?? item.workflow.startedAt);
+        return Number.isFinite(time) ? [new Date(time).toISOString().slice(0, 7)] : [];
+      }),
+    ]),
+  ]
+    .sort()
+    .reverse();
+  const outcomes = [
+    { label: "ALLOW", count: model.decisions.ALLOW, color: "#164f45" },
+    { label: "ESCALATE", count: model.decisions.ESCALATE, color: "#95611f" },
+    { label: "DENY", count: model.decisions.DENY, color: "#a44843" },
+    { label: "PENDING", count: model.decisions.PENDING, color: "#63716b" },
+  ];
+  const total = model.evidence.length;
+  const approvalRate = total ? Math.round((model.decisions.ALLOW / total) * 100) : null;
+  let offset = 0;
+  const sla = [
+    { label: "Within SLA", count: model.sla.within, color: "#536b55" },
+    { label: "Due today", count: model.sla.dueToday, color: "#95611f" },
+    { label: "Overdue", count: model.sla.overdue, color: "#a44843" },
+  ];
+  const backlog = model.decisions.ESCALATE;
+  return (
+    <section className={styles.reports} aria-label="Spend reports">
+      <div className={styles.reportToolbar}>
+        <div>
+          <strong>Synthetic reports · USD</strong>
+          <p>Latest {investigations.length} loaded investigations · up to 24 records · UTC</p>
+          {model.excludedCount > 0 && (
+            <p>{model.excludedCount} invalid or non-USD records excluded.</p>
+          )}
+        </div>
+        <div>
+          <label htmlFor="report-month">Reporting month</label>
+          <select
+            id="report-month"
+            value={selectedMonth}
+            onChange={(event) => setSelectedMonth(event.target.value)}
+          >
+            {months.map((month) => (
+              <option key={month} value={month}>
+                {monthLabel(month)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <p className={styles.reportStatus} role="status">
+        {model.label} · {total} records · {money(model.totalMinor)} approved controlled spend
+      </p>
+      <div className={styles.reportGrid}>
+        <article className={styles.reportCard}>
+          <h2>Controlled spend</h2>
+          <p>Approved requests · monthly comparison</p>
+          <strong className={styles.reportNumber}>{money(model.totalMinor)}</strong>
+          <ReportColumns bars={model.monthly} label="Monthly approved controlled spend" />
+        </article>
+        <article className={styles.reportCard}>
+          <h2>Average weekly spend</h2>
+          <p>Mean approved request per week · {model.label}</p>
+          <ReportColumns
+            bars={model.weekly.map((week) => ({
+              label: week.label,
+              amountMinor: week.averageMinor,
+            }))}
+            label="Mean approved request amount by week"
+          />
+        </article>
+        <article className={`${styles.reportCard} ${styles.reportWide}`}>
+          <div className={styles.reportCardHeading}>
+            <div>
+              <h2>Weekly controlled spend</h2>
+              <p>{model.label} · approved requests</p>
+            </div>
+            <div>
+              <strong>{money(model.totalMinor)}</strong>
+              <small>Monthly total</small>
+            </div>
+          </div>
+          <div className={styles.reportPlan}>
+            {model.planMinor === null ? (
+              "Plan unavailable"
+            ) : (
+              <>
+                <span>Synthetic monthly plan {money(model.planMinor)} · current budget limit</span>
+                <strong>
+                  {money(Math.abs(model.planVarianceMinor ?? 0))}{" "}
+                  {model.planVarianceMinor !== null && model.planVarianceMinor > 0
+                    ? "over"
+                    : "under"}{" "}
+                  plan
+                </strong>
+              </>
+            )}
+          </div>
+          <ReportColumns
+            bars={model.weekly}
+            label="Weekly approved controlled spend"
+            accent
+            planMinor={model.weeklyPlanMinor}
+          />
+        </article>
+      </div>
+      <div className={styles.reportMetrics}>
+        <article className={styles.reportCard}>
+          <h2>Budget remaining</h2>
+          <p>Current snapshot · all periods</p>
+          {model.budget ? (
+            <>
+              <strong className={styles.reportNumber}>{money(model.budget.remainingMinor)}</strong>
+              <div className={styles.reportStack} aria-hidden="true">
+                <span style={{ background: "#164f45", flex: model.budget.allocatedMinor }} />
+                <span style={{ background: "#b9cbb8", flex: model.budget.remainingMinor }} />
+              </div>
+              <dl className={styles.reportLegend}>
+                <div>
+                  <dt>Committed incl. holds</dt>
+                  <dd>{money(model.budget.allocatedMinor)}</dd>
+                </div>
+                <div>
+                  <dt>Remaining</dt>
+                  <dd>{money(model.budget.remainingMinor)}</dd>
+                </div>
+              </dl>
+              <p>
+                Committed {money(model.budget.committedMinor)} · held{" "}
+                {money(model.budget.heldMinor)}
+              </p>
+            </>
+          ) : (
+            <p className={styles.reportNumber}>Budget unavailable</p>
+          )}
+        </article>
+        <article className={`${styles.reportCard} ${styles.approvalCard}`}>
+          <h2>Auto-approval</h2>
+          <p>
+            {total} requests · {model.label}
+          </p>
+          <div className={styles.approvalRing}>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#e7eae3" strokeWidth="13" />
+              {outcomes.map((outcome) => {
+                const length = total ? (outcome.count / total) * 100 : 0;
+                const start = offset;
+                offset += length;
+                return (
+                  <circle
+                    key={outcome.label}
+                    cx="60"
+                    cy="60"
+                    r="46"
+                    fill="none"
+                    stroke={outcome.color}
+                    strokeWidth="13"
+                    pathLength="100"
+                    strokeDasharray={`${length} ${100 - length}`}
+                    strokeDashoffset={-start}
+                    transform="rotate(-90 60 60)"
+                  />
+                );
+              })}
+            </svg>
+            <div>
+              <strong>{approvalRate === null ? "—" : `${approvalRate}%`}</strong>
+              <span>ALLOW</span>
+            </div>
+          </div>
+          <dl className={styles.reportLegend}>
+            {outcomes.map((outcome) => (
+              <div key={outcome.label}>
+                <dt>
+                  <i style={{ background: outcome.color }} />
+                  {outcome.label}
+                </dt>
+                <dd>{outcome.count}</dd>
+              </div>
+            ))}
+          </dl>
+        </article>
+        <article className={styles.reportCard}>
+          <h2>Review backlog</h2>
+          <p>Synthetic 24-hour SLA · month end UTC</p>
+          <strong className={styles.reportNumber}>
+            {backlog}
+            <small> escalations</small>
+          </strong>
+          <div className={styles.reportStack} aria-hidden="true">
+            {sla.map((group) => (
+              <span key={group.label} style={{ flex: group.count, background: group.color }} />
+            ))}
+          </div>
+          <dl className={styles.reportLegend}>
+            {sla.map((group) => (
+              <div key={group.label}>
+                <dt>
+                  <i style={{ background: group.color }} />
+                  {group.label}
+                </dt>
+                <dd>{group.count}</dd>
+              </div>
+            ))}
+          </dl>
+          <p>Escalation aging; review resolutions are not available.</p>
+        </article>
+      </div>
+      <section className={styles.reportCard} aria-labelledby="report-evidence-title">
+        <h2 id="report-evidence-title">Report evidence</h2>
+        <p>{model.label} · persisted synthetic investigations</p>
+        <section
+          className={styles.reportTableScroll}
+          aria-label="Report evidence table"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the wide evidence table.
+          tabIndex={0}
+        >
+          <table className={styles.reportTable}>
+            <caption className={styles.reportSrOnly}>
+              Evidence for the selected reporting month
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Request</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Decision</th>
+                <th scope="col">Receipt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {model.evidence.map((item) => (
+                <tr key={item.workflow.id}>
+                  <th scope="row">
+                    {item.workflow.request.title}
+                    <small>{item.workflow.request.requestId}</small>
+                  </th>
+                  <td>{item.workflow.request.requestingAgent}</td>
+                  <td>{money(item.workflow.request.amountMinor)}</td>
+                  <td>{item.decision?.outcome ?? "PENDING"}</td>
+                  <td>
+                    <a
+                      className={styles.receiptLink}
+                      href={`/api/control-room?workflowId=${encodeURIComponent(item.workflow.id)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open receipt for ${item.workflow.request.title}`}
+                    >
+                      Open receipt ↗
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        {!total && <p className={styles.emptyNote}>No loaded USD evidence for this month.</p>}
+      </section>
+    </section>
+  );
+}
+
+function ReportColumns({
+  bars,
+  label,
+  accent = false,
+  planMinor = null,
+}: {
+  bars: { label: string; amountMinor: number }[];
+  label: string;
+  accent?: boolean;
+  planMinor?: number | null;
+}) {
+  const maximum = Math.max(100, ...bars.map((bar) => bar.amountMinor), planMinor ?? 0);
+  const ceiling = Math.ceil(maximum / 100) * 100;
+  const chartMoney = (minor: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: minor % 100 ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(minor / 100);
+  return (
+    <figure className={styles.reportChart} aria-label={label}>
+      <figcaption className={styles.reportSrOnly}>
+        Chart summary: {bars.map((bar) => `${bar.label}: ${money(bar.amountMinor)}`).join("; ")}
+        {planMinor !== null ? `. Weekly plan ${money(planMinor)}` : ""}.
+      </figcaption>
+      {planMinor !== null && <p className={styles.planKey}>Weekly plan {money(planMinor)}</p>}
+      <div className={styles.chartFrame} aria-hidden="true">
+        <div className={styles.moneyAxis}>
+          {[ceiling, Math.round(ceiling / 2), 0].map((value) => (
+            <span key={value}>{chartMoney(value)}</span>
+          ))}
+        </div>
+        <div className={styles.chartPlot}>
+          {planMinor !== null && (
+            <div
+              className={styles.planLine}
+              style={{ bottom: `${(planMinor / ceiling) * 100}%` }}
+            />
+          )}
+          <div
+            className={styles.chartBars}
+            style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0, 1fr))` }}
+          >
+            {bars.map((bar) => (
+              <div className={styles.chartColumn} key={bar.label}>
+                <div
+                  className={styles.chartBar}
+                  style={{
+                    height: `${(bar.amountMinor / ceiling) * 100}%`,
+                    background: accent ? "#8d604e" : "#164f45",
+                  }}
+                >
+                  <strong>{chartMoney(bar.amountMinor)}</strong>
+                </div>
+                <span className={styles.chartPeriod}>{bar.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </figure>
   );
 }
 

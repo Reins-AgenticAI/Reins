@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ControlRoom,
   evidenceTimeline,
+  ReportsView,
   RequestQueue,
   reconcileRunRows,
   runScenario,
@@ -12,6 +13,44 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Control Room", () => {
+  it("renders month-specific accessible reports before their evidence drill-down", () => {
+    const investigation = {
+      workflow: {
+        id: "wf-oct",
+        startedAt: "2026-10-05T12:00:00Z",
+        request: {
+          requestId: "oct-request",
+          title: "Synthetic software",
+          requestingAgent: "Engineering",
+          amountMinor: 12345,
+          currency: "USD",
+        },
+      },
+      decision: { outcome: "ALLOW" as const, decidedAt: "2026-10-05T12:00:00Z" },
+      lifecycle: [],
+    };
+    const render = (month: string) =>
+      renderToStaticMarkup(
+        <ReportsView
+          investigations={[investigation]}
+          budget={null}
+          selectedMonth={month}
+          setSelectedMonth={() => {}}
+        />,
+      );
+    const october = render("2026-10");
+    expect(october).toContain('for="report-month"');
+    expect(october).toContain("Oct 5–11");
+    expect(october).toContain("$123.45");
+    expect(october).toContain("Synthetic software");
+    expect(october).toContain("/api/control-room?workflowId=wf-oct");
+    expect(october.indexOf("Weekly controlled spend")).toBeLessThan(
+      october.indexOf("Report evidence"),
+    );
+    expect(october).toContain("Chart summary");
+    expect(october).toContain("Budget unavailable");
+    expect(render("2026-09")).not.toContain("Synthetic software");
+  });
   it("does not promote explicit partial-run failures after a matching ALLOW receipt refresh", async () => {
     vi.stubGlobal("fetch", async () =>
       Response.json(

@@ -1,3 +1,360 @@
+.reports {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.reportToolbar,
+.reportCardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.reportToolbar strong {
+  font-size: 0.83rem;
+}
+.reportToolbar p,
+.reportCard > p,
+.reportCardHeading p {
+  color: #4e5c56;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin-top: 0.3rem;
+}
+.reportToolbar label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+.reportToolbar select {
+  min-height: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: #fffefc;
+  color: var(--ink);
+  padding: 0.5rem 0.8rem;
+  font: inherit;
+  font-size: 0.8rem;
+}
+.reportToolbar select:focus-visible,
+.reportTableScroll:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+.reportStatus {
+  font-size: 0.78rem;
+  color: #40524d;
+}
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.reportMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.reportCard {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 1.3rem;
+  background: #fffefc;
+  min-width: 0;
+}
+.reportCard h2 {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+.reportWide {
+  grid-column: 1 / -1;
+}
+.reportNumber {
+  display: block;
+  font-size: 1.8rem;
+  letter-spacing: -0.04em;
+  margin: 1.1rem 0;
+  font-weight: 600;
+}
+.reportNumber small {
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.reportCardHeading > div:last-child {
+  text-align: right;
+}
+.reportCardHeading strong {
+  font-size: 1.5rem;
+}
+.reportCardHeading small {
+  display: block;
+  color: #4e5c56;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+}
+.reportPlan {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #4e5c56;
+  margin-top: 1rem;
+}
+.reportChart {
+  margin: 2.7rem 0 3rem;
+}
+.reportGrid > .reportCard:nth-child(2) .reportChart {
+  margin-top: 6rem;
+}
+.chartFrame {
+  display: grid;
+  grid-template-columns: 4.8rem minmax(0, 1fr);
+  gap: 0.65rem;
+  height: 168px;
+}
+.moneyAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font-size: 0.65rem;
+  color: #4e5c56;
+  font-variant-numeric: tabular-nums;
+}
+.moneyAxis span {
+  transform: translateY(-50%);
+}
+.moneyAxis span:last-child {
+  transform: translateY(50%);
+}
+.chartPlot {
+  position: relative;
+  border-bottom: 1px solid #bcc7bf;
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(50% - 1px),
+    #e5e8e1 calc(50% - 1px),
+    #e5e8e1 50%
+  );
+}
+.chartBars {
+  display: grid;
+  height: 100%;
+  gap: 1rem;
+  padding: 0 0.8rem;
+}
+.chartColumn {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+}
+.chartBar {
+  position: relative;
+  width: 100%;
+  max-width: 90px;
+  min-height: 1px;
+  border-radius: 3px 3px 0 0;
+}
+.chartBar strong {
+  position: absolute;
+  bottom: calc(100% + 0.45rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: #fffefc;
+  z-index: 2;
+}
+.chartPeriod {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  left: -0.35rem;
+  right: -0.35rem;
+  font-size: 0.65rem;
+  text-align: center;
+  color: #40524d;
+  line-height: 1.4;
+}
+.planLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 2px dashed #56685d;
+  z-index: 1;
+  pointer-events: none;
+}
+.planKey {
+  font-size: 0.7rem;
+  color: #40524d;
+  margin-bottom: 1.2rem !important;
+}
+.planKey::before {
+  content: "";
+  display: inline-block;
+  width: 1.2rem;
+  border-top: 2px dashed #56685d;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+.reportStack {
+  display: flex;
+  height: 1.3rem;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background: #e7eae3;
+  margin: 1.1rem 0;
+}
+.reportLegend {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+  font-size: 0.73rem;
+}
+.reportLegend > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.reportLegend dt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.reportLegend dd {
+  margin: 0;
+  font-weight: 650;
+}
+.reportLegend i {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+.approvalCard > h2,
+.approvalCard > p {
+  text-align: center;
+}
+.approvalRing {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 1rem auto;
+}
+.approvalRing svg {
+  width: 100%;
+  height: 100%;
+}
+.approvalRing > div {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.approvalRing strong {
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+.approvalRing span {
+  font-size: 0.65rem;
+  color: #4e5c56;
+  margin-top: 0.15rem;
+}
+.reportTableScroll {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+.reportTable {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 0.75rem;
+}
+.reportTable th,
+.reportTable td {
+  padding: 0.8rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+.reportTable thead {
+  background: #f1f3ee;
+}
+.reportTable tbody th {
+  font-weight: 500;
+  min-width: 12rem;
+}
+.reportTable small {
+  display: block;
+  color: #4e5c56;
+  font-size: 0.65rem;
+  margin-top: 0.3rem;
+  overflow-wrap: anywhere;
+}
+.reportSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .reportMetrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .reportGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .reportGrid > .reportCard:nth-child(2) .reportChart {
+    margin-top: 3rem;
+  }
+}
+@media (max-width: 480px) {
+  .reportToolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .reportToolbar > div:last-child,
+  .reportToolbar select {
+    width: 100%;
+  }
+  .reportCard {
+    padding: 1rem 0.8rem;
+  }
+  .chartFrame {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.4rem;
+  }
+  .chartBars {
+    gap: 0.65rem;
+    padding: 0 0.3rem;
+  }
+  .chartBar strong {
+    font-size: 0.6875rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    width: calc(100% + 0.5rem);
+  }
+  .moneyAxis,
+  .chartPeriod {
+    font-size: 0.6875rem;
+  }
+  .reportCardHeading strong {
+    font-size: 1.1rem;
+  }
+}
 .shell {
   --ink: #17221f;
   --muted: #66716d;
