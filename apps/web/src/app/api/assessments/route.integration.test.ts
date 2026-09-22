@@ -1,14 +1,26 @@
 import { closeDatabase } from "@reins/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+const environmentKeys = ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"] as const;
+const originalEnvironment = Object.fromEntries(
+  environmentKeys.map((key) => [key, process.env[key]]),
+);
+
 beforeAll(() => {
-  process.env.DATABASE_URL = "postgresql://reins:reins_local_only@127.0.0.1:5432/reins_test";
-  process.env.BETTER_AUTH_URL = "http://localhost:3000";
-  process.env.BETTER_AUTH_SECRET = "01234567890123456789012345678901";
+  process.env.DATABASE_URL ??= "postgresql://reins:reins_local_only@127.0.0.1:5432/reins_test";
+  process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
+  process.env.BETTER_AUTH_SECRET ??= "01234567890123456789012345678901";
   vi.resetModules();
 });
 afterAll(async () => {
   await closeDatabase();
+  for (const [key, value] of Object.entries(originalEnvironment)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
   vi.resetModules();
 });
 
