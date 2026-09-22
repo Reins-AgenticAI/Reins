@@ -23,7 +23,6 @@
 - [Try the demo](#try-the-demo)
 - [Evaluation](#evaluation)
 - [Security and data](#security-and-data)
-- [Roadmap](#roadmap)
 - [Contributors](#contributors)
 - [Project resources](#project-resources)
 
@@ -189,17 +188,6 @@ node scripts/verify-control-room.mjs http://127.0.0.1:3000
 
 See [SECURITY.md](SECURITY.md) for reporting guidance and [CONTRIBUTING.md](CONTRIBUTING.md) for collaboration conventions.
 
-## Roadmap
-
-- [x] Deterministic policy gate and typed decision receipts
-- [x] Atomic shared-budget reservations and replay protection
-- [x] Multi-agent Control Room with parallel synthetic finance workflows
-- [x] Evidence timeline, reconciliation signals, and reports
-- [x] Local AI advisory integration with fail-closed behavior
-- [ ] Hosted synthetic portfolio deployment with managed PostgreSQL
-- [ ] Provider sandbox adapters with explicit coverage contracts
-- [ ] Customer discovery with B2B agent-platform and finance teams
-
 ## Contributors
 
 Reins is a shared project by:
@@ -212,7 +200,6 @@ The project tracks shared ownership rather than assigning individual contributio
 ## Project resources
 
 - [Product requirements document](docs/Reins_PRD_Revision_1.md)
-- [Milestone plan](docs/Reins_Milestone_Plan.md)
 - [Local release runbook](docs/verification/m5-local-release.md)
 - [Architecture foundation](docs/architecture/m1-foundation.md)
 - [Security policy](SECURITY.md)
