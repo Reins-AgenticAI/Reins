@@ -17,5 +17,5 @@
 - Validate financial-domain inputs in the domain function as well as at the HTTP boundary. Internal callers must not be able to turn malformed money or policy fields into an ALLOW result.
 - Preserve absent optional financial facts as unavailable through reporting transformations. A missing committed or held amount must not become a displayed zero, even when aggregate allocation can be derived from known totals.
 - Scope human-approval retrieval to the organization and workflow at the persistence boundary. A valid approval from another workflow must never bind to a receipt.
-- Use persisted workflow identity for rendered request keys and evidence-row verification. Legacy synthetic data can reuse a request ID across workflows; request-ID-only keys can leave stale rows after a scenario replaces the queue.
+- Use persisted workflow identity consistently for request keys, selection, receipt lookup, refresh reconciliation, and timeline navigation. Legacy synthetic data can reuse a request ID across workflows; test clicking both duplicates and preserving pending selection when workflow IDs arrive.
 - Browser-verifier claims must cover every console error and every request destination, including redirects. Attach waiter rejection handlers before triggering actions, and keep cleanup failures within privacy-safe diagnostics.

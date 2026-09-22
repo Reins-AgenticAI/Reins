@@ -92,6 +92,8 @@ const previewRows = (scenarioId: string, runId?: string): QueueRow[] =>
     requestingAgent: task.agent,
   }));
 const defaultScenario = "quarter-close-spend-controls";
+const rowIdentity = (row: { workflowId?: string | undefined; requestId: string }) =>
+  row.workflowId ?? row.requestId;
 
 export function stripeSandboxAvailability(
   result: { decision: Decision; workflowId?: string; receiptId?: string } | null,
@@ -163,7 +165,11 @@ export function reconcileRunRows(rows: QueueRow[], investigations: Investigation
     // A recorded failure is authoritative for this run. Only a lost/unknown
     // response may be reconciled from a later persisted receipt.
     if (row.error && row.error !== "RESPONSE_UNKNOWN") return row;
-    const saved = investigations.find((item) => item.workflow.request.requestId === row.requestId);
+    const saved = investigations.find((item) =>
+      row.workflowId
+        ? item.workflow.id === row.workflowId
+        : item.workflow.request.requestId === row.requestId,
+    );
     return saved?.decision
       ? {
           ...row,
@@ -223,6 +229,13 @@ export function ControlRoom() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    // Preserve a pending selection when its persisted workflow identity arrives.
+    setSelectedId((current) => {
+      const row = runRows?.find((item) => item.requestId === current);
+      return row ? rowIdentity(row) : current;
+    });
+  }, [runRows]);
   const rows: QueueRow[] =
     runRows ??
     investigations.map((item) => ({
@@ -230,9 +243,11 @@ export function ControlRoom() {
       workflowId: item.workflow.id,
       decision: item.decision?.outcome,
     }));
-  const selected = rows.find((row) => row.requestId === selectedId) ?? rows[0];
+  const selected = rows.find((row) => rowIdentity(row) === selectedId) ?? rows[0];
   const investigation = investigations.find((item) => item.workflow.id === selected?.workflowId);
-  const selectedResult = results.find((item) => item.requestId === selected?.requestId);
+  const selectedResult = results.find(
+    (item) => selected && rowIdentity(item) === rowIdentity(selected),
+  );
   const selectedRunId = selected?.requestId.split(":").slice(1).join(":");
   const timelineInvestigations = runRows
     ? investigations.filter((item) => runRows.some((row) => row.workflowId === item.workflow.id))
@@ -458,7 +473,7 @@ export function ControlRoom() {
                 ) : null}
                 <RequestQueue
                   rows={rows}
-                  selectedId={selected?.requestId ?? ""}
+                  selectedId={selected ? rowIdentity(selected) : ""}
                   select={(id) => {
                     setSelectedId(id);
                     setStripeMessage("");
@@ -593,7 +608,7 @@ export function ControlRoom() {
                             <button
                               className={styles.receiptLink}
                               type="button"
-                              onClick={() => setSelectedId(event.requestId)}
+                              onClick={() => setSelectedId(event.workflowId)}
                             >
                               {event.requestId}
                             </button>
@@ -1155,15 +1170,15 @@ export function RequestQueue({
           <tbody>
             {visibleRows.map((row) => (
               <tr
-                key={row.workflowId ?? row.requestId}
-                className={selectedId === row.requestId ? styles.selectedRow : undefined}
+                key={rowIdentity(row)}
+                className={selectedId === rowIdentity(row) ? styles.selectedRow : undefined}
               >
                 <td>
                   <button
                     type="button"
                     className={styles.requestSelect}
-                    onClick={() => select(row.requestId)}
-                    aria-pressed={selectedId === row.requestId}
+                    onClick={() => select(rowIdentity(row))}
+                    aria-pressed={selectedId === rowIdentity(row)}
                     title={row.requestId}
                   >
                     {row.requestId}

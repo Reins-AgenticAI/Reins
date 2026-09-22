@@ -13,6 +13,33 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Control Room", () => {
+  it("refreshes a known workflow from its own receipt when request IDs are reused", () => {
+    const request = {
+      requestId: "legacy-request",
+      title: "Synthetic request",
+      requestingAgent: "Engineering",
+      vendor: "Datacore",
+      amountMinor: 100,
+      currency: "USD",
+      costCenter: "Engineering",
+    };
+    const investigations = (["ALLOW", "DENY"] as const).map((outcome, index) => ({
+      workflow: { id: `workflow-${index}`, request, startedAt: "2026-09-21T10:00:00Z" },
+      decision: {
+        outcome,
+        reasonCodes: [],
+        policyVersionId: `policy-${index}`,
+        reservationId: `reservation-${index}`,
+        decidedAt: "2026-09-21T10:00:01Z",
+      },
+      traces: [],
+      lifecycle: [],
+      findings: [],
+    }));
+    expect(
+      reconcileRunRows([{ ...request, workflowId: "workflow-1" }], investigations)[0],
+    ).toMatchObject({ workflowId: "workflow-1", decision: "DENY" });
+  });
   it("shows unavailable budget details without replacing known allocation and remaining totals", () => {
     const html = renderToStaticMarkup(
       <ReportsView
